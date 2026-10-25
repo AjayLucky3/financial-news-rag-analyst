@@ -1,0 +1,40 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables & secrets (CRITICAL: Never commit API keys)
+.env
+*.env
+.env.*
+!.env.example
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# macOS / OS files
+.DS_Store
+*.swp
+*.swo
+
+# Testing & Cache
+.pytest_cache/
+.cache/
+huggingface/
+*.log
+
+# IDE & Editor files
+.vscode/
+.idea/
+.agents/
+.claude/
+
+# Data directory & local SQLite databases
+data/
+*.csv
+*.db
+*.sqlite
+*.sqlite3

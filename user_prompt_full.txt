@@ -1,0 +1,1033 @@
+<USER_REQUEST>
+OPEN THE ENTIRE PROJECT:
+
+/Users/domaajay/.gemini/antigravity/scratch/financial-news-rag-analyst
+
+WE ARE NOW DOING A DATA-INTEGRITY + ARCHITECTURE + BEGINNER-UX CORRECTION PASS.
+
+DO NOT JUST CHANGE COLORS, TEXT, OR SPACING.
+
+I inspected the current application screenshots and found several actual data and architectural problems.
+
+The goal is to make this a credible portfolio-grade financial news analytics + RAG system.
+
+============================================================
+CRITICAL PRINCIPLE
+============================================================
+
+The application must NEVER make a small or incomplete dataset look statistically strong.
+
+We will not fabricate data.
+
+We will not interpolate missing news.
+
+We will not duplicate headlines.
+
+We will not artificially increase observations.
+
+We will not modify correlations to look better.
+
+We will not generate fake financial data in REAL mode.
+
+We will not hide insufficient data.
+
+We will not claim prediction or causation.
+
+============================================================
+1. DO NOT TRAIN FINBERT
+============================================================
+
+FinBERT is a pretrained financial sentiment model.
+
+DO NOT train or fine-tune FinBERT on the current project dataset.
+
+The pipeline remains:
+
+News
+→ FinBERT inference
+→ sentiment
+→ SQLite + ChromaDB
+→ statistical analysis
+→ RAG
+
+The current project dataset is an application dataset, not a training dataset.
+
+============================================================
+2. CURRENT DATA IS TOO SMALL
+============================================================
+
+The current screenshots show examples such as:
+
+TCS:
+64 headlines
+31 news days
+30 comparable sessions
+
+Infosys:
+0 headlines
+8 news days
+8 comparable sessions
+
+Reliance:
+50 headlines
+19 comparable sessions
+
+Wipro:
+237 headlines
+53 comparable sessions
+
+HDFC Bank:
+50 headlines
+11 comparable sessions
+
+These numbers MUST NOT be assumed correct.
+
+Inspect the database and determine the actual values.
+
+More importantly:
+
+DO NOT present 30/60/90 days of sparse news as if it were a statistically robust financial research dataset.
+
+The application must explicitly distinguish:
+
+- data coverage
+- exploratory analysis
+- insufficient sample
+
+============================================================
+3. CHANGE THE DATA STRATEGY
+============================================================
+
+The application should support HISTORICAL BACKFILL + INCREMENTAL INGESTION.
+
+Target architecture:
+
+Historical archive:
+minimum 1 year
+
+Preferred portfolio demonstration:
+1–3 years where practical
+
+Then incremental ingestion:
+
+existing latest date
+→ fetch new news
+→ fetch latest stock data
+→ deduplicate
+→ FinBERT
+→ store
+→ update Chroma
+
+DO NOT delete historical data when running a new ingestion.
+
+DO NOT replace the database with only the latest 90 days.
+
+The analysis window should be a VIEW over the historical database.
+
+Example:
+
+Database:
+3 years
+
+User analysis:
+30 / 60 / 90 / 180 / 365 days
+
+============================================================
+4. DATA MODEL
+============================================================
+
+Maintain separate concepts:
+
+DATABASE HISTORY
+    ↓
+USER SELECTED ANALYSIS WINDOW
+    ↓
+VALID OBSERVATIONS FOR EACH METRIC
+
+Do not use one generic "sample size" everywhere.
+
+For each company calculate separately:
+
+total headlines
+news days
+trading sessions
+valid sentiment days
+valid next-session return observations
+valid paired observations
+
+============================================================
+5. FIX THE TCS PRICE CHART
+============================================================
+
+CRITICAL.
+
+The current TCS screenshot shows impossible-looking repeated price collapses from approximately 2400 to approximately 1000 and back again.
+
+This MUST be investigated.
+
+DO NOT smooth the graph.
+
+DO NOT hide the graph.
+
+DO NOT replace values manually.
+
+Find the actual data problem.
+
+Inspect:
+
+yfinance output
+MultiIndex handling
+column selection
+adjusted vs unadjusted price
+date alignment
+duplicate rows
+sorting
+concatenation
+company filtering
+numeric conversion
+
+Print/debug the actual TCS rows that produce the large jumps.
+
+Verify whether:
+
+close
+adjusted close
+stock split adjustment
+ticker/company mapping
+
+are being handled correctly.
+
+Use one consistent return methodology.
+
+The displayed price series must be internally consistent.
+
+Add a regression test that rejects impossible duplicate/misaligned price rows.
+
+============================================================
+6. FIX INFOSYS DATA INCONSISTENCY
+============================================================
+
+Current UI shows:
+
+Infosys:
+0 headlines
+8 news days
+8 comparable sessions
+
+This is logically inconsistent if "news days" is derived from headlines.
+
+Trace exactly how:
+
+headline_count
+news_days
+daily_metrics
+
+are calculated.
+
+A company with zero stored headlines cannot have 8 news days based on those headlines.
+
+Find the root cause.
+
+Possible causes to investigate:
+
+stale daily_metrics
+wrong company filtering
+database mixing
+demo/real contamination
+date aggregation bug
+ticker/company mismatch
+left join producing false news days
+
+Fix the underlying database/query logic.
+
+DO NOT simply change the displayed number.
+
+============================================================
+7. FIX SAMPLE SIZE INCONSISTENCY
+============================================================
+
+Current UI shows:
+
+30 comparable sessions
+
+but another section says:
+
+72 trading sessions sample size.
+
+These are not interchangeable.
+
+Define:
+
+comparable_sessions =
+count of rows where:
+
+sentiment is valid
+AND next_session_return is valid
+AND has_news == True
+
+Correlation MUST use comparable_sessions.
+
+If comparable_sessions = 30:
+
+Pearson n = 30
+Spearman n = 30
+
+The UI must never say:
+
+30 comparable sessions
+
+and then:
+
+72 sample size
+
+for the same analysis.
+
+============================================================
+8. DEFINE SAMPLE STATUS
+============================================================
+
+Use:
+
+<15 comparable observations:
+🔴 INSUFFICIENT DATA
+
+15–29:
+🟡 EXPLORATORY SAMPLE
+
+30–59:
+🟢 BROADER EXPLORATORY SAMPLE
+
+60+:
+🟢 LARGER HISTORICAL SAMPLE
+
+These labels are about data coverage, not statistical significance.
+
+Never use:
+
+"proven"
+"accurate"
+"reliable prediction"
+"high confidence"
+
+based only on sample size.
+
+============================================================
+9. SUPPRESS STATISTICAL METRICS WHEN INSUFFICIENT
+============================================================
+
+If:
+
+n < 15
+
+DO NOT display Pearson or Spearman correlation.
+
+Instead:
+
+"Not enough comparable observations to calculate a meaningful association metric."
+
+Show:
+
+Comparable observations: 8
+
+Then tell the user how to improve:
+
+"Try a longer historical analysis period or ingest more historical data."
+
+============================================================
+10. BEGINNER-FIRST HOME EXPERIENCE
+============================================================
+
+Redesign the top of the application around:
+
+# Understand a Company's News & Stock
+
+Sidebar:
+
+Company
+Analysis Period
+
+Then:
+
+[ Analyze ]
+
+Immediately explain:
+
+1. WHAT DID THE NEWS SAY?
+2. WHAT DID THE STOCK DO?
+3. DID THEY MOVE TOGETHER?
+
+Do not start with:
+
+Pearson
+Spearman
+RAG
+Chroma
+FinBERT
+embeddings
+
+Those belong in Technical Details.
+
+============================================================
+11. SENTIMENT EDUCATION
+============================================================
+
+For sentiment:
+
+Show:
+
+-1 ───────── 0 ───────── +1
+Negative    Neutral    Positive
+
+Use:
+
+<= -0.60
+Strongly Negative
+
+-0.60 to -0.20
+Negative
+
+-0.20 to +0.20
+Near Neutral / Mixed
+
++0.20 to +0.60
+Positive
+
+>= +0.60
+Strongly Positive
+
+These are UI interpretation bands only.
+
+Show:
+
+Average sentiment:
++0.312
+
+🟢 Positive
+
+Then:
+
+"The sentiment score measures the balance between positive and negative financial language detected by FinBERT."
+
+CRITICAL:
+
+"The score is NOT a probability that the stock will rise."
+
+Add:
+
+How is this calculated?
+
+Positive probability
+Negative probability
+Neutral probability
+
+sentiment =
+positive probability - negative probability
+
+============================================================
+12. STOCK RETURN EDUCATION
+============================================================
+
+Show:
+
+WHAT DID THE STOCK DO?
+
+Mean next-session return:
+
++0.16%
+
+Explain:
+
+"This measures the average percentage change during the next available trading session after a news-associated trading session."
+
+Examples:
+
++1% = stock increased by 1%
+-1% = stock decreased by 1%
+
+Do not call this a prediction.
+
+============================================================
+13. ASSOCIATION EDUCATION
+============================================================
+
+Show:
+
+DID NEWS SENTIMENT AND STOCK RETURNS MOVE TOGETHER?
+
+Example:
+
++0.087
+
+⚪ VERY WEAK ASSOCIATION
+
+Plain English:
+
+"In this dataset, more positive or negative news sentiment showed very little relationship with the following trading-session return."
+
+Then:
+
+"Association describes historical co-movement. It does not prove that news caused the stock movement and does not predict future returns."
+
+Technical details:
+
+Pearson
+Spearman
+n
+date range
+
+============================================================
+14. DATA COVERAGE MUST BE OBVIOUS
+============================================================
+
+Show:
+
+HOW MUCH DATA DO WE HAVE?
+
+Global:
+
+total headlines
+total trading sessions
+historical coverage period
+
+Selected company:
+
+headline count
+news days
+valid sentiment days
+comparable sessions
+
+Explain:
+
+"Comparable sessions are trading sessions where both news sentiment and a following stock return were available."
+
+============================================================
+15. COMPANY DATA TABLE
+============================================================
+
+Keep:
+
+TCS
+Infosys
+Reliance
+Wipro
+HDFC Bank
+
+Show:
+
+Company
+Headlines
+News Days
+Comparable Sessions
+Status
+
+All values must come from the database.
+
+Do not display stale cached values.
+
+Clicking a company should update the dashboard.
+
+============================================================
+16. RAG MUST USE A SUFFICIENT HISTORICAL EVIDENCE BASE
+============================================================
+
+Do not market the current tiny dataset as a powerful RAG knowledge base.
+
+The RAG system should operate over the historical news archive.
+
+Preferred target:
+
+1+ year of historical news
+
+Ideally:
+
+1–3 years
+
+for each supported company where practical.
+
+RAG should support questions such as:
+
+"What were the most negative news periods for TCS?"
+
+"What major themes appeared in Infosys news?"
+
+"Show recent negative headlines."
+
+"Compare TCS and Infosys sentiment."
+
+"What happened around unusually negative sentiment periods?"
+
+============================================================
+17. RAG MUST NEVER INVENT MISSING DATA
+============================================================
+
+If there are only 8 Infosys articles:
+
+the RAG must say:
+
+"Only 8 relevant headlines are currently available for Infosys in the selected period."
+
+Then answer only from those.
+
+If evidence is insufficient:
+
+"I don't have enough data to answer that reliably."
+
+No hallucination.
+
+============================================================
+18. SEPARATE HISTORICAL DATA FROM DEMO DATA
+============================================================
+
+REAL mode:
+
+finance.db
+real fetched news
+real yfinance prices
+
+DEMO mode:
+
+demo_finance.db
+clearly synthetic/demo records
+
+Never mix them.
+
+Never show:
+
+demo.example.com
+
+when REAL mode is selected.
+
+============================================================
+19. REMOVE / RELOCATE THE DEMO SEED BUTTON
+============================================================
+
+Current UI still shows:
+
+"Seed 90-Day Demo Data"
+
+even when REAL mode is active.
+
+This is confusing.
+
+Move demo controls into:
+
+DEMO MODE
+
+or hide the seed button when REAL mode is active.
+
+REAL mode should visually communicate:
+
+🟢 REAL INGESTED DATA
+
+DEMO mode:
+
+🟡 DEMONSTRATION DATA
+
+============================================================
+20. HUGGING FACE FAILURE MUST NOT CRASH THE APPLICATION
+============================================================
+
+Current RAG failure:
+
+Cannot connect to huggingface.co
+
+LocalEntryNotFoundError
+
+The embedding model:
+
+all-MiniLM-L6-v2
+
+is not available locally.
+
+The application MUST gracefully handle this.
+
+At startup / ingestion:
+
+check whether the embedding model is available.
+
+If unavailable:
+
+show:
+
+"Semantic search is unavailable because the embedding model is not available locally."
+
+Do not display a Python traceback to the user.
+
+Do not pretend semantic RAG works.
+
+Do not silently replace embeddings with fake vectors.
+
+Provide a technical remediation message:
+
+"Download/cache the embedding model while internet access is available, then restart the application."
+
+============================================================
+21. PRELOAD MODELS
+============================================================
+
+FinBERT and sentence-transformer models should load once per process.
+
+Do not initialize them on every RAG query.
+
+Use appropriate caching/resource lifecycle.
+
+============================================================
+22. RAG FALLBACK
+============================================================
+
+If embeddings are unavailable:
+
+AGGREGATE questions may still work using SQLite.
+
+For example:
+
+"What is the average sentiment for TCS?"
+
+should still work.
+
+But semantic retrieval questions should clearly say:
+
+"Semantic retrieval is currently unavailable."
+
+Do not crash.
+
+============================================================
+23. EMPTY SHOCK EVENTS
+============================================================
+
+If no shock events:
+
+do not render a giant empty chart.
+
+Show a compact explanation:
+
+"No unusual sentiment events were detected."
+
+Then:
+
+"Shock detection requires at least 20 valid news observations and identifies sessions where sentiment differs from the company's average by at least 2 standard deviations."
+
+============================================================
+24. BEGINNER MODE
+============================================================
+
+Add a visible:
+
+"Beginner Guide"
+
+containing:
+
+What is sentiment?
+What is a trading return?
+What is association?
+What does -1 mean?
+What does +1 mean?
+What is a trading session?
+What is a shock event?
+What does RAG do?
+
+Keep it simple.
+
+============================================================
+25. ADVANCED / TECHNICAL MODE
+============================================================
+
+Technical users can expand:
+
+Technical Details
+
+Show:
+
+FinBERT
+formula
+Pearson
+Spearman
+rolling correlation
+shock methodology
+two-session forward return
+SQLite
+ChromaDB
+embedding model
+RAG routing
+
+Do not force beginners to read these.
+
+============================================================
+26. HISTORICAL DATA INGESTION
+============================================================
+
+Implement a proper historical backfill mode.
+
+Example CLI concept:
+
+python orchestrator.py --backfill --days 365
+
+Then:
+
+python orchestrator.py --run-pipeline --days 7
+
+should only ingest recent incremental data without destroying the archive.
+
+Ensure idempotency.
+
+Use article_id.
+
+Do not duplicate existing articles.
+
+============================================================
+27. DATA QUALITY REPORT
+============================================================
+
+Add an internal/debug report:
+
+For each company:
+
+raw news count
+after cleaning
+after exact dedup
+after normalized dedup
+after relevance filtering
+after near dedup
+FinBERT scored count
+stored headline count
+news days
+comparable sessions
+
+This will help diagnose issues like the current Infosys 0-headline / 8-news-day inconsistency.
+
+============================================================
+28. DO NOT ADD MODEL TRAINING
+============================================================
+
+Do NOT add:
+
+XGBoost
+Random Forest
+LSTM
+stock prediction model
+FinBERT fine-tuning
+
+unless explicitly requested later.
+
+The current system is an:
+
+"Evidence-grounded financial news analytics and RAG system."
+
+It is NOT:
+
+"AI stock prediction."
+
+============================================================
+29. FIX DATE AND PRICE INTEGRITY
+============================================================
+
+Search the whole codebase for:
+
+1970
+timestamp conversions
+timezone conversions
+pd.to_datetime
+yfinance MultiIndex
+Close
+Adj Close
+duplicate dates
+company/ticker mapping
+
+Add tests for:
+
+correct dates
+unique trading sessions
+price continuity sanity checks
+company isolation
+no cross-company contamination
+
+============================================================
+30. REAL DATA ACCEPTANCE CRITERIA
+============================================================
+
+Before considering this release complete:
+
+At least attempt a historical backfill.
+
+Target:
+
+365 days
+
+for:
+
+TCS.NS
+INFY.NS
+RELIANCE.NS
+WIPRO.NS
+HDFCBANK.NS
+
+Do NOT fabricate data if an API fails.
+
+If a company cannot be fetched:
+
+report the actual failure.
+
+Do not pretend all five companies have equivalent coverage.
+
+============================================================
+31. RAG ACCEPTANCE CRITERIA
+============================================================
+
+Test:
+
+"What is the average sentiment for TCS?"
+
+"What were the most negative TCS news periods?"
+
+"Show recent Infosys headlines."
+
+"Compare TCS and Infosys sentiment."
+
+"Explain what the sentiment score means."
+
+Test both:
+
+LLM available
+LLM unavailable
+
+Test:
+
+embedding model available
+embedding model unavailable
+
+No crashes.
+
+============================================================
+32. UI ACCEPTANCE CRITERIA
+============================================================
+
+A beginner must be able to answer:
+
+What company am I looking at?
+
+How much data exists?
+
+What did the news say?
+
+What happened to the stock?
+
+Did they move together?
+
+How reliable is the available sample?
+
+What does the number mean?
+
+What can I ask the AI?
+
+without understanding:
+
+FinBERT
+Pearson
+Spearman
+RAG
+Chroma
+embeddings
+SQLite
+
+============================================================
+33. IMPORTANT LANGUAGE RULE
+============================================================
+
+Never use:
+
+"caused"
+"predicts"
+"will rise"
+"will fall"
+"guaranteed"
+"accurate prediction"
+
+Use:
+
+"associated with"
+"co-occurred with"
+"observed in this dataset"
+"historical pattern"
+"exploratory evidence"
+
+============================================================
+34. TEST EVERYTHING
+============================================================
+
+Run:
+
+pytest -q
+
+Then perform:
+
+365-day historical backfill if APIs allow.
+
+Then launch:
+
+streamlit run app.py --server.port 8501
+
+Test:
+
+TCS
+Infosys
+Reliance
+Wipro
+HDFC Bank
+
+Test:
+
+30 days
+60 days
+90 days
+180 days
+365 days
+
+Test:
+
+REAL
+DEMO
+
+Test:
+
+LLM configured
+LLM unavailable
+
+Test:
+
+embedding model cached
+embedding model unavailable
+
+============================================================
+35. FINAL REPORT
+============================================================
+
+Report:
+
+1. Actual historical data available per company
+2. Number of headlines
+3. Number of news days
+4. Comparable sessions
+5. Any companies with insufficient data
+6. TCS price-data bug root cause
+7. Infosys zero-headline/news-day bug root cause
+8. 30 vs 72 sample-size bug root cause
+9. Hugging Face failure handling
+10. RAG behavior with insufficient data
+11. RAG behavior with embedding model unavailable
+12. Real/demo isolation
+13. Beginner UX changes
+14. Tests passed
+15. Tests failed
+16. Remaining limitations
+
+DO NOT HIDE FAILURES.
+
+If historical data cannot be obtained because an external API fails, report that honestly.
+
+DO NOT replace it with synthetic data.
+
+STOP AFTER THIS PASS.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-05T14:30:21+05:30.
+</ADDITIONAL_METADATA>
